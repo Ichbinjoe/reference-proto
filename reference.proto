@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package reference;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+/**
+ * Type for configuring parameters of an Argon2idSigSource.
+ */
+message Argon2idSigSource {
+    /**
+     * pVersion is an enumeration value which defines a variety of parameters for
+     * use by Argon2id. This ensures that all hosts will be able to validate a
+     * given entry in an appropriate amount of time.
+     * 
+     * +----+----+--------------------+------+-----------+---------+
+     * | id | fn |        salt        | time |   memory  | threads |
+     * +----+----+--------------------+------+-----------+---------+
+     * |  1 | id | 0x25b946ebc0b36173 |    1 | 64 * 1000 |       4 |
+     * +----+----+--------------------+------+-----------+---------+
+     *
+     * Salt 0x25b946ebc0b36173 for id 1 was chosen using the output of Python's
+     * hex() function with the input 2718281828459045235 - the first 19 numbers of
+     * euler's constant, as retrieved from here:
+     *
+     * http://www.gutenberg.org/files/127/127.txt
+     *
+     * This results in a perfectly sized 8 byte constant - 0x25b946ebc0b36173.
+    */
+    enum Argon2Consts {
+        ID_1 = 0;
+    }
+    
+    Argon2Consts pVersion = 1;
+}
+
+/**
+ * Reference is the main payload which is matched to a short key.
+ * 
+ * The marshalled structure is hashed using the signature source specified
+ * within to generate the appropriate short stub.
+ */
+message Reference {
+    /**
+     * Actual reference which is pointed to. MUST be in URI format. SHOULD be
+     * an officially supported protocol, however the reference is not invalid
+     * if the protocol is not known.
+     *
+     * Reference MUST be smaller than 512 bytes large.
+     */
+    string reference = 1;
+
+    /**
+     * Timestamp of when this reference was created. Obviously this isn't
+     * enforcable except to prevent it from traveling into the future.
+     */
+    google.protobuf.Timestamp created = 2;
+    /**
+     * Timestamp of when this reference should become invalid. After this
+     * time, the reference will become invalid.
+     */
+    google.protobuf.Timestamp expires = 3;
+
+    /**
+     * All of the different types of encodings a slug can be in!
+     */
+    enum Encoding {
+        /**
+         * Argued to be most human usable - used for crypto addresses
+         */
+        BASE58 = 0;
+        /**
+         * This is the base64url version mind you - its meant to be used in a
+         * URL!
+         */
+        BASE64 = 1;
+        /**
+         * This is the RFC1924 Base85, not Ascii85. For when you have a lot of
+         * bits and not enough places to shove them.
+         */
+        BASE85 = 2;
+    }
+
+    /**
+     * Encoding of the slug
+     */
+    Encoding slugEncoding = 4;
+    
+
+    /**
+     * sigsource holds a single sigsource configuration which specifies how to
+     * recreate the reference slug
+     */
+    oneof sigsource {
+        /**
+         * The argonid2 source
+         */
+        Argon2idSigSource argon2Sig = 10;
+    }
+
+    /**
+     * Client/implementation specific data for potentially tracking the
+     * reference. May include whatever is desired by whatever generates the
+     * reference.
+     */
+    google.protobuf.Any sourceMeta = 50;
+}
+
+
